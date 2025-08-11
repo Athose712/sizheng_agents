@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>思政课智能助手 - 统一入口</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>思政课智能助手</h1>
+        <p class="subtitle">请选择课程进入相应智能学习系统</p>
+      </header>
+
+      <section class="cards">
+        {% for key, t in targets.items() %}
+        <a class="card" href="{{ t.url }}" target="_blank" rel="noopener">
+          <div class="card-body">
+            <h2>{{ t.name }}</h2>
+            <p>{{ t.desc }}</p>
+            <span class="enter">进入 →</span>
+          </div>
+        </a>
+        {% endfor %}
+      </section>
+
+      <footer>
+        <small>建议先分别启动三个子系统服务，再打开本页面。</small>
+      </footer>
+    </div>
+  </body>
+  </html>
+
+

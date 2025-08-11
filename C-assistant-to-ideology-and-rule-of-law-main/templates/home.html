@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思想道德与法治助手 - 模式选择</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .mode-buttons { display: flex; gap: 40px; justify-content: center; margin-top: 80px; }
+        .mode-btn { display: inline-block; padding: 25px 40px; border-radius: 20px; background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-bronze) 100%); color: var(--text-dark); font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
+        .mode-btn:hover { transform: translateY(-4px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
+        .info-panel { max-width: 900px; margin: 60px auto 0; padding: 24px 28px; background: rgba(25,25,46,0.72); border: 2px solid var(--accent-gold); border-radius: 18px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); text-align: center; }
+        .info-title { font-family: 'Cinzel', serif; font-size: 1.6rem; color: var(--accent-gold); margin-bottom: 10px; letter-spacing: 1px; }
+        .info-text { font-family: 'Crimson Text', serif; font-size: 1.15rem; line-height: 1.9; color: var(--text-light); opacity: 0.95; }
+        .info-text b { color: var(--accent-gold); }
+    </style>
+    </head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 思想道德与法治助手</h1>
+            <p>请选择您想使用的模式</p>
+        </div>
+        <div class="mode-buttons">
+            <a href="{{ url_for('chat_ui') }}" class="mode-btn">💬 聊天模式</a>
+        </div>
+        <div class="info-panel">
+            <div class="info-title">✨ 使用说明</div>
+            <div class="info-text">
+                ✉️ 在 <b>聊天模式</b> 中，助手可为您 <b>出题</b>（按需显示解析）或 <b>生成知识图谱</b>（Mermaid 思维导图）。<br>
+                🖼️ 支持 <b>图像上传</b>：可上传试题截图或材料，与文本共同分析与推理。<br>
+                📚 数据库：使用“思想道德与法治”专属向量库以提升准确性。
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
