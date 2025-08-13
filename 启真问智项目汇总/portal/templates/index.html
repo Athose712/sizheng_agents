@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>思政课智能助手 - 统一入口</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
@@ -15,8 +18,9 @@
 
       <section class="cards">
         {% for key, t in targets.items() %}
-        <a class="card" href="{{ t.url }}" target="_blank" rel="noopener">
+        <a class="card" href="{{ t.url }}" target="_blank" rel="noopener" onmousemove="this.querySelector('.card-glow').style.setProperty('--mx', event.offsetX + 'px'); this.querySelector('.card-glow').style.setProperty('--my', event.offsetY + 'px');">
           <div class="card-body">
+            <div class="card-glow"></div>
             <h2>{{ t.name }}</h2>
             <p>{{ t.desc }}</p>
             <span class="enter">进入 →</span>
@@ -26,7 +30,7 @@
       </section>
 
       <footer>
-        <small>建议先分别启动三个子系统服务，再打开本页面。</small>
+        <small>建议先分别启动各子系统服务，再打开本页面。</small>
       </footer>
     </div>
   </body>

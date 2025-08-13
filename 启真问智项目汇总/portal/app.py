@@ -5,6 +5,15 @@ from flask import Flask, render_template
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from dotenv import load_dotenv
 
+# Ensure shared_utils (plain folder) is importable without packaging
+_PORTAL_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if _PORTAL_ROOT not in sys.path:
+    sys.path.insert(0, _PORTAL_ROOT)
+# Also add repository root so `shared_utils/` at root is importable
+_REPO_ROOT = os.path.abspath(os.path.join(_PORTAL_ROOT, os.pardir))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 
 def _load_sub_app(module_name: str, file_path: str):
     module_dir = os.path.dirname(file_path)
@@ -43,6 +52,16 @@ def create_app() -> Flask:
                 "desc": "思想道德与法治智能学习与问答",
                 "url": "/sdfz/",
             },
+                "maogai": {
+                    "name": "毛概助手",
+                    "desc": "毛泽东思想概论智能学习与问答",
+                    "url": "/maogai/",
+                },
+                "xigai": {
+                    "name": "习概助手",
+                    "desc": "习近平新时代中国特色社会主义思想概论智能学习与问答",
+                    "url": "/xigai/",
+                },
         }
         return render_template("index.html", targets=targets)
 
@@ -68,10 +87,14 @@ def create_app() -> Flask:
     mayuan_path = os.path.join(base_dir, "A-assistant-to-the-basic-principles-of-Marxism-main", "app.py")
     jindaishi_path = os.path.join(base_dir, "B-assistant-to-the-outline-of-modern-chinese-history-main", "app.py")
     sdfz_path = os.path.join(base_dir, "C-assistant-to-ideology-and-rule-of-law-main", "app.py")
+    maogai_path = os.path.join(base_dir, "D-assistant-to-the-introduction-of-mao-zedong-thought-main", "app.py")
+    xigai_path = os.path.join(base_dir, "E-assistant-to-the-introduction-of-xi-jinping-thought-main", "app.py")
 
     mayuan_app = _load_sub_app("mayuan_app", mayuan_path)
     jindaishi_app = _load_sub_app("jindaishi_app", jindaishi_path)
     sdfz_app = _load_sub_app("sdfz_app", sdfz_path)
+    maogai_app = _load_sub_app("maogai_app", maogai_path)
+    xigai_app = _load_sub_app("xigai_app", xigai_path)
 
     app.wsgi_app = DispatcherMiddleware(
         app.wsgi_app,
@@ -79,6 +102,8 @@ def create_app() -> Flask:
             "/mayuan": mayuan_app,
             "/jindaishi": jindaishi_app,
             "/sdfz": sdfz_app,
+            "/maogai": maogai_app,
+            "/xigai": xigai_app,
         },
     )
 

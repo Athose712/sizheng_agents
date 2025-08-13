@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>习近平新时代中国特色社会主义思想概论 - 模式选择</title>
+	<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	<style>
+		.mode-buttons { display: flex; gap: 40px; justify-content: center; margin-top: 80px; }
+		.mode-btn { display: inline-block; padding: 25px 40px; border-radius: 20px; background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-bronze) 100%); color: var(--text-dark); font-family: 'Cinzel', serif; font-size: 1.3rem; font-weight: 600; text-decoration: none; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
+		.mode-btn:hover { transform: translateY(-4px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h1>🎓 习近平新时代中国特色社会主义思想概论</h1>
+			<p>请选择您想使用的模式</p>
+		</div>
+		<div class="mode-buttons">
+			<a href="{{ url_for('chat_ui') }}" class="mode-btn">💬 聊天模式</a>
+			<a href="{{ url_for('role_chat_page') }}" class="mode-btn">🧑‍🏫 角色扮演模式</a>
+		</div>
+	</div>
+</body>
+</html>
+
+
