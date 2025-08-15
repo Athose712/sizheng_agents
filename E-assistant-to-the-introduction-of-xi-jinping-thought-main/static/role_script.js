@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     dialogueEl.textContent = '思考中...';
     try {
-      const url = sessionId ? '/continue_dialogue' : '/start_dialogue';
+      const url = sessionId ? 'continue_dialogue' : 'start_dialogue';
       const payload = { response_mode: mode };
       if (message) payload.message = message;
       if (image) payload.image = image;

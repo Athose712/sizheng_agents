@@ -29,175 +29,75 @@ except Exception:
 
 from typing import Optional
 
-try:
-    from shared_utils.base_kg_agent import BaseKnowledgeGraphAgent
-    from shared_utils.base_retrieval_agent import BaseRetrievalAgent
-    from shared_utils.base_agent import BaseAgent
-except Exception:
-    # 兼容旧结构
-    from common_utils.base_kg_agent import BaseKnowledgeGraphAgent
-    from common_utils.base_retrieval_agent import BaseRetrievalAgent
-    from common_utils.base_agent import BaseAgent
-
-try:
-    from shared_utils.multimodal_agent import MayuanMultimodalAgent
-except Exception:
-    from common_utils.multimodal_agent import MayuanMultimodalAgent
 from role_agent import SocratesAgent
+from maogai_agent import MaogaiQuestionAgent
+from maogai_kg_agent import MaogaiKnowledgeGraphAgent
+from maogai_qa_agent import MaogaiAnswerAgent
+from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage
+from shared_utils.llm_wrapper import CustomChatDashScope as _KGLLM
 
 
-class MaogaiKnowledgeGraphAgent(BaseKnowledgeGraphAgent):
+class KGAgentWrapper:
     def __init__(self):
-        super().__init__(subject_name="毛泽东思想概论", vectorstore_path="database_agent_maogai")
-
-
-class MaogaiQuestionAgent(BaseAgent):
-    def __init__(self):
-        common_topics = [
-            "毛泽东思想", "新民主主义革命", "人民战争", "统一战线", "农村包围城市", "武装夺取政权",
-            "实事求是", "群众路线", "独立自主", "矛盾论", "实践论", "延安整风",
-            "新民主主义社会", "三大作风", "三个基本方面",
-        ]
-        super().__init__(
-            subject_name="毛泽东思想概论",
-            default_topic="毛泽东思想",
-            common_topics=common_topics,
-            vectorstore_path="database_agent_maogai",
-        )
+        self._agent = None
         try:
-            self.multimodal_agent = MayuanMultimodalAgent()
-        except Exception:
-            self.multimodal_agent = None
-        self._last_full_output = ""
-        self._last_question_only_output = ""
+            # 优先使用标准的知识图谱 Agent（带检索）
+            self._agent = MaogaiKnowledgeGraphAgent()
+        except Exception as e:
+            print(f"[KG] 标准Agent初始化失败，将使用降级模式：{e}")
+            # 准备降级所需对象（仅LLM，无检索）
+            self.subject_name = "毛泽东思想与中国特色社会主义概论"
+            self._llm = _KGLLM(model="qwen-max", temperature=0.5)
+            self._graph_prompt = PromptTemplate.from_template(
+                """
+你是一位{subject_name}知识图谱专家。请围绕知识点"{topic}"构建一个 Mermaid mindmap（思维导图）格式的知识图谱，突出关键概念及其主要关系，并保持简洁易读。
+
+输出要求：
+1. mindmap 总节点不超过 15 个，层级不超过 3 级，保证图谱信息清晰、结构美观。
+2. 先输出 Mermaid 源代码，必须使用如下代码块格式：
+```mermaid
+mindmap
+  root(({topic}))
+    概念1
+      子概念A
+    概念2
+```
+3. Mermaid 代码块结束后，换行再输出一段不超过 100 字的中文总结，对图谱内容进行简洁概括。
+4. 除以上内容外，不要输出其他文字。
+"""
+            )
+
+    def build_knowledge_graph(self, topic: str) -> str:
+        if self._agent is not None:
+            return self._agent.build_knowledge_graph(topic)
+        prompt_text = self._graph_prompt.format(subject_name=self.subject_name, topic=topic)
+        messages = [SystemMessage(content="你是一位精通知识图谱构建的学者。"), HumanMessage(content=prompt_text)]
+        response = self._llm.invoke(messages)
+        return str(getattr(response, "content", response)).strip()
+
+    def _extract_topic(self, user_input: str) -> str:
+        trigger_keywords = [
+            "知识图谱", "思维导图", "mindmap", "图谱", "生成", "制作", "构建", "画", "帮我", "请", "关于", "：", ":",
+        ]
+        topic = user_input
+        for kw in trigger_keywords:
+            topic = topic.replace(kw, "")
+        topic = topic.strip().lstrip("，,。 、")
+        return topic if topic else user_input
 
     def process_request(self, user_input: str) -> str:
-        if any(kw in user_input for kw in ["解析", "答案", "讲解", "答案解析", "参考答案"]):
-            return self._last_full_output or "当前没有可供解析的题目，请先提出出题需求。"
-        full_output = super().process_request(user_input)
-        self._last_full_output = full_output
-        self._last_question_only_output = self._strip_explanations(full_output)
-        return self._last_question_only_output
-
-    def process_multimodal_request(self, text_input: str, image_path: Optional[str] = None) -> str:
-        if not image_path or not self.multimodal_agent:
-            return self.process_request(text_input)
-        if any(kw in text_input for kw in ["解析", "答案", "讲解", "答案解析", "参考答案"]):
-            return self._last_full_output or "当前没有可供解析的题目，请先提出出题需求。"
-        try:
-            full_output = self.multimodal_agent.process_multimodal_request(text_input, image_path)
-            self._last_full_output = full_output
-            if any(kw in text_input for kw in ["出题", "生成题目", "题目", "选择题", "判断题", "简答题", "试题", "练习"]):
-                self._last_question_only_output = self._strip_explanations(full_output)
-                return self._last_question_only_output
-            return full_output
-        except Exception:
-            return self.process_request(text_input)
-
-    def _strip_explanations(self, text: str) -> str:
-        import re
-        lines = text.splitlines()
-        filtered = []
-        start_patterns = [
-            r"^\s*(?:正确?答案|参考答案|标准答案|答案解析|解析|解答|讲解|答案是|答案为|Answer|Explanation)\s*[:：】\])]?.*$",
-            r"^\s*[（(【\[]?(?:答|解)\s*[：:]\s*.*$",
-            r"^\s*[【\[]?(?:答案|解析|参考答案)[】\]]\s*.*$",
-        ]
-        inline_patterns = [r"(正确?答案|参考答案|标准答案|答案解析|解析|解答|答案是|答案为|Answer|Explanation)\s*[:：]?\s*"]
-        boundary_patterns = [
-            r"^\s*(?:题目|选择题|判断题|简答题)\s*\d+",
-            r"^\s*(?:选择题|判断题|简答题)\s*[：:]\s*$",
-            r"^\s*\d+\s*[、\.\)．]",
-        ]
-        start_regexes = [re.compile(p, re.IGNORECASE) for p in start_patterns]
-        inline_regexes = [re.compile(p, re.IGNORECASE) for p in inline_patterns]
-        boundary_regexes = [re.compile(p) for p in boundary_patterns]
-        in_strip_block = False
-        def is_start(line: str) -> bool:
-            return any(r.match(line) for r in start_regexes) or any(r.search(line) for r in inline_regexes)
-        def is_boundary(line: str) -> bool:
-            return any(r.match(line) for r in boundary_regexes)
-        for line in lines:
-            if in_strip_block:
-                if is_boundary(line):
-                    in_strip_block = False
-                    filtered.append(line)
-                else:
-                    continue
-            else:
-                if is_start(line):
-                    in_strip_block = True
-                    continue
-                filtered.append(line)
-        import re as _re
-        result = "\n".join(filtered)
-        result = _re.sub(r"\n{3,}", "\n\n", result).strip("\n")
-        return result
-
-
-class MaogaiAnswerAgent(BaseRetrievalAgent):
-    def __init__(self):
-        super().__init__(
-            subject_name="毛泽东思想概论",
-            vectorstore_path="database_agent_maogai",
-            llm_model="qwen-max",
-            embedding_model="text-embedding-v2",
-            temperature=0.3,
-        )
-        try:
-            self.multimodal_agent = MayuanMultimodalAgent()
-        except Exception:
-            self.multimodal_agent = None
-
-    def process_multimodal_request(self, text_input: str, image_path: Optional[str] = None) -> str:
-        if not image_path:
-            return self.process_request(text_input)
-        try:
-            if self.multimodal_agent:
-                return self.multimodal_agent.process_multimodal_request(text_input, image_path)
-        except Exception:
-            pass
-        return self.process_request(text_input)
-
-    def process_request(self, user_question: str) -> str:
-        from langchain_core.messages import HumanMessage, SystemMessage
-        docs = self._retrieve_docs(f"{user_question} {self.subject_name}", k=5)
-        context = "\n\n".join(docs[:5])
-        prompt = (
-            f"你是一位精通{self.subject_name}的教师，请以结构化 Markdown 输出，条理清晰、重点明确。"
-            "请优先完整与准确，适度展开，避免冗余。若下方\"参考资料\"足够，请严格基于资料作答；否则结合你的专业知识回答。\n\n"
-            "请按照以下结构组织你的回答（如不适用可省略某些小节）：\n"
-            "### 核心结论\n"
-            "- 用1-2句加粗给出直接答案或观点。\n\n"
-            "### 关键要点\n"
-            "- 3-6条要点，每条不超过两句，必要处使用**加粗关键词**。\n\n"
-            "### 依据与推理\n"
-            "- 用2-5句解释你的论证链条，可引用资料中的关键句（简洁转述）。\n\n"
-            "### 示例或应用（可选）\n"
-            "- 给出1个贴近教学的例子或场景来帮助理解。\n\n"
-            "### 小结与延伸（可选）\n"
-            "- 用1-2句总结，并提出1个进一步思考方向。\n\n"
-            "参考资料（可能为空）：\n" + context + "\n\n学生问题：" + user_question + "\n回答："
-        )
-        messages = [
-            SystemMessage(content=(
-                f"你是一位严谨的{self.subject_name}解答专家。"
-                "请使用结构化 Markdown（标题、列表、加粗）输出，层次清晰，美观易读；"
-                "在保证准确性的前提下适度展开，覆盖关键要点。"
-            )),
-            HumanMessage(content=prompt),
-        ]
-        try:
-            response = self.llm.invoke(messages, **self.generation_kwargs)
-            import re
-            answer = str(getattr(response, "content", response)).strip()
-            answer = re.sub(r"^`+|`+$", "", answer).strip()
-            return answer
-        except Exception:
-            return "抱歉，回答过程中出现问题，请稍后再试。"
+        topic = self._extract_topic(user_input)
+        return self.build_knowledge_graph(topic)
 
 
 app = Flask(__name__)
+
+# 预先加载 .env，确保 Agent 初始化阶段可获取到密钥等环境变量
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', tempfile.gettempdir())
@@ -251,7 +151,7 @@ except Exception as e:
     question_agent = None
 
 try:
-    kg_agent = MaogaiKnowledgeGraphAgent()
+    kg_agent = KGAgentWrapper()
 except Exception as e:
     print(f"Error loading MaogaiKnowledgeGraphAgent: {e}")
     kg_agent = None
@@ -453,7 +353,7 @@ def chat():
                 if image_path:
                     response_text = "知识图谱生成功能暂时不支持图片输入，请使用纯文本描述您需要的知识图谱主题。"
                 else:
-                    response_text = kg_agent.build_knowledge_graph(user_message)
+                    response_text = kg_agent.process_request(user_message)
             else:
                 response_text = "知识图谱助手未成功加载，无法处理您的请求。"
         else:
@@ -476,17 +376,28 @@ def chat():
                 else:
                     response_text = "问答助手未成功加载，无法处理您的请求。"
             else:
-                if question_agent:
-                    apply_mode(question_agent)
-                    if hasattr(question_agent, 'process_multimodal_request') and image_path:
-                        response_text = question_agent.process_multimodal_request(user_message, image_path)
-                    else:
-                        if image_path:
-                            response_text = "当前版本暂时不支持图片分析，请使用纯文本提问。"
+                exam_keywords = ["出题", "生成题目", "选择题", "判断题", "简答题", "试题", "练习"]
+                if any(kw in user_message for kw in exam_keywords):
+                    if question_agent:
+                        apply_mode(question_agent)
+                        if hasattr(question_agent, 'process_multimodal_request') and image_path:
+                            response_text = question_agent.process_multimodal_request(user_message, image_path)
                         else:
-                            response_text = question_agent.process_request(user_message)
+                            if image_path:
+                                response_text = "当前版本暂时不支持图片分析，请使用纯文本提问。"
+                            else:
+                                response_text = question_agent.process_request(user_message)
+                    else:
+                        response_text = "出题助手未成功加载，无法处理您的请求。"
                 else:
-                    response_text = "出题助手未成功加载，无法处理您的请求。"
+                    if qa_agent:
+                        apply_mode(qa_agent)
+                        if image_path and hasattr(qa_agent, 'process_multimodal_request'):
+                            response_text = qa_agent.process_multimodal_request(user_message, image_path)
+                        else:
+                            response_text = qa_agent.process_request(user_message)
+                    else:
+                        response_text = "问答助手未成功加载，无法处理您的请求。"
     except Exception as e:
         response_text = f"处理您的请求时发生内部错误: {e}"
     finally:

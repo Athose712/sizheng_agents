@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 		showLoading(true);
 		try {
-			await fetch('/end_dialogue', {
+			await fetch('end_dialogue', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ session_id: sessionId }),
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		userInput.value = '';
 		showLoading(true);
 
-		const url = sessionId ? '/continue_dialogue' : '/start_dialogue';
+		const url = sessionId ? 'continue_dialogue' : 'start_dialogue';
 		const payload = sessionId ? { session_id: sessionId, message: text } : { message: text };
 		if (modeSelect && modeSelect.value) payload.response_mode = modeSelect.value;
 		if (imageBase64) payload.image = imageBase64;
